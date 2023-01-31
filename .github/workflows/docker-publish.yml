@@ -17,6 +17,21 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 
+publish-hello-docker-image:
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v2
+- name: Login to GitHub Container Registry
+uses: docker/login-action@v1
+with:
+registry: ghcr.io
+username: ${{ github.actor }}
+password: ${{ secrets.GITHUB_TOKEN }}
+- name: Build the hello-docker Docker image
+run: |
+       docker build . --tag ghcr.io/deselikem/hello-docker-gcr-demo:latest
+       docker run ghcr.io/deselikem/hello-docker-gcr-demo:latest
+       docker push ghcr.io/deselikem/hello-docker-gcr-demo:latest
 jobs:
   build:
 
@@ -84,8 +99,10 @@ jobs:
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}
+        with:
+          private-repository: true
         env:
-          COSIGN_EXPERIMENTAL: "false"
+          COSIGN_EXPERIMENTAL: "true"
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
         run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.build-and-push.outputs.digest }}
